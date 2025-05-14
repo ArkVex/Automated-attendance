@@ -3,7 +3,6 @@ import pandas as pd
 import time 
 from datetime import datetime
 import os
-import plotly.express as px
 from streamlit_autorefresh import st_autorefresh
 
 # Page config with custom theme
@@ -17,27 +16,56 @@ st.set_page_config(
 st.markdown("""
     <style>
     .main {
-        background-color: #f0f2f6;
+        background-color: #f8f9fa;
     }
     .stMetric {
         background-color: #ffffff;
         padding: 15px;
-        border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        border: 1px solid #e9ecef;
     }
     .stDataFrame {
         background-color: #ffffff;
-        padding: 10px;
-        border-radius: 10px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        padding: 15px;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        border: 1px solid #e9ecef;
     }
     h1 {
-        color: #1f77b4;
+        color: #2c3e50;
         padding-bottom: 20px;
+        font-weight: 600;
     }
     h2 {
-        color: #2c3e50;
+        color: #34495e;
+        padding: 12px 0;
+        font-weight: 500;
+    }
+    h3 {
+        color: #3498db;
         padding: 10px 0;
+        font-weight: 500;
+    }
+    .stSidebar .sidebar-content {
+        background-color: #ffffff;
+    }
+    .stButton>button {
+        background-color: #3498db;
+        color: white;
+        border-radius: 6px;
+        padding: 4px 25px;
+        font-weight: 500;
+    }
+    .stButton>button:hover {
+        background-color: #2980b9;
+        border-color: #2980b9;
+    }
+    .st-emotion-cache-16idsys p {
+        color: #2c3e50;
+    }
+    .st-emotion-cache-1cwxc1x {
+        border-color: #e9ecef;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -72,36 +100,50 @@ try:
     if os.path.exists(attendance_file):
         df = pd.read_csv(attendance_file)
         
-        # Top metrics
+        # Display statistics
         st.markdown("### 📊 Today's Overview")
         col1, col2, col3, col4 = st.columns(4)
         with col1:
-            st.metric("📅 Date", date)
+            st.metric("📅 Date", date,)
         with col2:
-            st.metric("⏰ Time", current_time)
+            st.metric("⏰ Time", current_time, delta_color="off")
         with col3:
-            st.metric("👥 Total Students", len(df))
+            st.metric("👥 Total Students", len(df) )
         with col4:
             present_count = len(df[df['Status'] == 'Present']) if 'Status' in df.columns else len(df)
-            st.metric("✅ Present Students", present_count)
-            
-        # Attendance Timeline
+            st.metric("✅ Present Students", present_count, delta_color="off")
+        
+        # Add custom CSS for metric colors
+        st.markdown("""
+            <style>
+            .stMetric {
+            background-color: black;
+            color: black;
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border: 1px solid #dcdcdc;
+            }
+            </style>
+        """, unsafe_allow_html=True)
+        # Attendance Timeline using native Streamlit chart
         st.markdown("### 📈 Attendance Timeline")
         df['TIME'] = pd.to_datetime(df['TIME'], format='%H:%M-%S')
         df['Hour'] = df['TIME'].dt.hour
         hourly_counts = df.groupby('Hour').size().reset_index(name='Count')
-        fig = px.line(hourly_counts, x='Hour', y='Count', 
-                     title='Attendance Pattern Throughout the Day',
-                     labels={'Count': 'Number of Students', 'Hour': 'Hour of Day'})
-        fig.update_layout(
-            xaxis=dict(tickmode='linear', tick0=0, dtick=1),
-            plot_bgcolor='white'
+        
+        # Using Streamlit's native line chart
+        st.line_chart(
+            hourly_counts.set_index('Hour')['Count'],
+            use_container_width=True
         )
-        st.plotly_chart(fig, use_container_width=True)
         
         # Attendance Table
         st.markdown("### 📋 Attendance Records")
         df_display = df.copy()
+        df_display['Serial No.'] = range(1, len(df_display) + 1)
+        df_display = df_display[['Serial No.', 'NAME', 'TIME']]
+        
         df_display['Serial No.'] = range(1, len(df_display) + 1)
         df_display = df_display[['Serial No.', 'NAME', 'TIME']]
         st.dataframe(
